@@ -173,22 +173,29 @@ export const GLASS_TYPE_LABELS = labelMap(GLASS_TYPE_OPTIONS);
  * LEAD SOURCE
  * ------------------------------------------------------------------ */
 export const SOURCE_OPTIONS = [
-  { value: 'META_ADS', label: 'Meta Ads (FB/Instagram)', color: '#1877F2' },
-  { value: 'GOOGLE_ADS', label: 'Google Ads', color: '#4285F4' },
+  // Ordered by how often this client actually uses them — the top three are
+  // one tap away when adding a lead on a phone.
+  { value: 'WEBSITE', label: 'Website', color: '#0EA5E9' },
+  { value: 'WHATSAPP', label: 'WhatsApp', color: '#25D366' },
+  { value: 'ONLINE_NEW', label: 'Online - New', color: '#6366F1' },
+  { value: 'ONLINE_20KM', label: 'Online - 20km', color: '#8B5CF6' },
+  { value: 'ONLINE_10KM', label: 'Online - 10km', color: '#A855F7' },
+  { value: 'WALK_IN', label: 'Walk-in / Showroom', color: '#059669' },
+  { value: 'REFERRAL', label: 'Referral', color: '#F97316' },
   { value: 'GMB', label: 'Google My Business', color: '#34A853' },
   { value: 'JUSTDIAL', label: 'JustDial', color: '#F58220' },
   { value: 'INDIAMART', label: 'IndiaMART', color: '#2E3192' },
   { value: 'SULEKHA', label: 'Sulekha', color: '#E4002B' },
-  { value: 'WEBSITE', label: 'Website', color: '#0EA5E9' },
-  { value: 'WHATSAPP', label: 'WhatsApp', color: '#25D366' },
-  { value: 'WALK_IN', label: 'Walk-in / Showroom', color: '#059669' },
-  { value: 'REFERRAL', label: 'Referral', color: '#8B5CF6' },
-  { value: 'ARCHITECT', label: 'Architect / Interior Designer', color: '#6366F1' },
-  { value: 'BUILDER', label: 'Builder / Developer', color: '#A855F7' },
+  { value: 'ARCHITECT', label: 'Architect / Interior Designer', color: '#4a3aa7' },
+  { value: 'BUILDER', label: 'Builder / Developer', color: '#eb6834' },
   { value: 'HOARDING', label: 'Hoarding / Pamphlet', color: '#F59E0B' },
-  { value: 'EXHIBITION', label: 'Exhibition / Trade Show', color: '#F97316' },
+  { value: 'EXHIBITION', label: 'Exhibition / Trade Show', color: '#eda100' },
   { value: 'COLD_CALL', label: 'Cold Call / Field Marketing', color: '#64748B' },
   { value: 'REPEAT', label: 'Repeat Customer', color: '#047857' },
+  // Ad channels keep their existing keys so historical leads and reports stay
+  // intact; only the display label is shortened.
+  { value: 'META_ADS', label: 'MA', color: '#1877F2' },
+  { value: 'GOOGLE_ADS', label: 'GA', color: '#4285F4' },
   { value: 'OTHER', label: 'Other', color: '#94A3B8' },
 ] as const;
 export type LeadSource = (typeof SOURCE_OPTIONS)[number]['value'];

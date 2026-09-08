@@ -65,7 +65,7 @@ export const emptyLead: LeadFormValues = {
   phone: '',
   altPhone: '',
   email: '',
-  source: 'META_ADS',
+  source: 'WEBSITE',
   sourceDetail: '',
   stage: 'NEW',
   address: { line1: '', area: '', city: '', state: '', pincode: '', landmark: '' },

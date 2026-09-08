@@ -112,6 +112,15 @@ function coerceSource(raw: string | undefined): LeadSource {
   if (text.includes('indiamart')) return 'INDIAMART';
   if (text.includes('sulekha')) return 'SULEKHA';
   if (text.includes('whatsapp')) return 'WHATSAPP';
+
+  // Distance-tagged online campaigns, e.g. "Online 20km", "online-10 km".
+  if (text.includes('online')) {
+    if (text.includes('20')) return 'ONLINE_20KM';
+    if (text.includes('10')) return 'ONLINE_10KM';
+    if (text.includes('new')) return 'ONLINE_NEW';
+    return 'ONLINE_NEW';
+  }
+
   if (text.includes('website') || text.includes('web')) return 'WEBSITE';
   if (text.includes('refer')) return 'REFERRAL';
   if (text.includes('walk')) return 'WALK_IN';
