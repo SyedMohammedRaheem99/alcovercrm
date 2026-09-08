@@ -13,8 +13,8 @@ Its single most important job: **never let a follow-up fall through.**
 npm install
 
 # 2. Configure
-cp .env.example .env.local
-#    then edit .env.local — see "Environment variables" below
+#    Create .env.local in the project root — see "Environment variables" below
+#    for the exact contents. It is gitignored and never committed.
 
 # 3. Create the first login + default dropdown lists
 npm run seed
@@ -33,7 +33,23 @@ Open http://localhost:3000 and sign in with the email/password you set in
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` and fill in:
+Create a `.env.local` file in the project root with these keys. This file is
+gitignored — real credentials never belong in the repository.
+
+```bash
+MONGODB_URI="mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/alcove_crm?retryWrites=true&w=majority"
+JWT_SECRET="a-long-random-string-at-least-32-characters"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Only needed when running `npm run seed`
+SEED_ORG_NAME="Your Business Name"
+SEED_ADMIN_NAME="Admin"
+SEED_ADMIN_EMAIL="admin@yourbusiness.com"
+SEED_ADMIN_PASSWORD="ChooseAStrongPassword1"
+```
+
+On Vercel, only the first three are required — set them under
+*Settings → Environment Variables*.
 
 | Variable | Required | What it is |
 |---|---|---|
