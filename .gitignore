@@ -16,3 +16,6 @@ next-env.d.ts
 # Test artefacts (screenshots produced by scripts/visual-check.mjs)
 desktop-*.png
 mobile-*.png
+
+# Env template kept local only (not published)
+.env.example
