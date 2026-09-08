@@ -1,0 +1,49 @@
+{
+  "name": "alcove-crm",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "tsx scripts/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx scripts/test-models.ts && tsx scripts/test-auth.ts && tsx scripts/test-tenancy.ts && tsx scripts/test-analytics.ts && tsx scripts/test-import.ts",
+    "test:e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "2.4.3",
+    "clsx": "2.1.1",
+    "date-fns": "4.1.0",
+    "exceljs": "^4.4.0",
+    "jose": "5.9.6",
+    "lucide-react": "0.469.0",
+    "mongoose": "^9.9.5",
+    "next": "^16.3.4",
+    "papaparse": "5.4.1",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "recharts": "2.15.0",
+    "tailwind-merge": "2.6.0",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "2.4.6",
+    "@types/node": "22.10.5",
+    "@types/papaparse": "5.3.15",
+    "@types/react": "19.0.7",
+    "@types/react-dom": "19.0.3",
+    "autoprefixer": "10.4.20",
+    "dotenv": "^17.4.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.4",
+    "mongodb-memory-server": "^11.2.0",
+    "postcss": "^8.5.28",
+    "puppeteer": "^25.10.0",
+    "sharp": "^0.35.4",
+    "tailwindcss": "3.4.17",
+    "tsx": "^4.23.13",
+    "typescript": "5.7.3"
+  }
+}
