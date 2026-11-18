@@ -119,7 +119,10 @@ async function main() {
   check('score stripped', !('score' in safe));
   check('isDeleted stripped', !('isDeleted' in safe));
   check('createdBy stripped', !('createdBy' in safe));
-  check('legitimate fields kept', safe.name === 'Legit Name' && safe.stage === 'WON');
+  // Stage is no longer directly writable: every stage move must go through
+  // `changeStage`, which applies the contact markers and the next-step rule.
+  check('stage stripped', !('stage' in safe));
+  check('legitimate fields kept', safe.name === 'Legit Name');
 
   /* ---------------------------------------------------------------- */
   console.log('\nINPUT SANITISATION');

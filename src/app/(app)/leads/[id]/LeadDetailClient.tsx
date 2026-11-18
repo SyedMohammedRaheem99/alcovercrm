@@ -547,6 +547,9 @@ function StageModal({
   const [submitting, setSubmitting] = useState(false);
 
   const closing = stage === 'WON' || stage === 'LOST';
+  // ON_HOLD is intentionally parked, so it is the one open stage that needs no
+  // next step. Everything else must leave the lead with a scheduled follow-up.
+  const needsFollowUp = !closing && stage !== 'ON_HOLD' && stage !== current;
 
   async function submit() {
     setSubmitting(true);
@@ -584,7 +587,7 @@ function StageModal({
             fullWidth
             onClick={submit}
             loading={submitting}
-            disabled={stage === 'LOST' && !lostReason}
+            disabled={(stage === 'LOST' && !lostReason) || (needsFollowUp && !followUpAt)}
           >
             Update
           </Button>
@@ -618,10 +621,15 @@ function StageModal({
         )}
         {!closing && (
           <Input
-            label="Next follow-up"
+            label={needsFollowUp ? 'Next follow-up (required)' : 'Next follow-up'}
             type="datetime-local"
             value={followUpAt}
             onChange={(e) => setFollowUpAt(e.target.value)}
+            hint={
+              needsFollowUp
+                ? 'This lead stays open, so it needs a next step.'
+                : undefined
+            }
           />
         )}
       </div>

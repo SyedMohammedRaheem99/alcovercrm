@@ -176,7 +176,10 @@ export function LeadForm({
       email: clean(values.email),
       source: values.source,
       sourceDetail: clean(values.sourceDetail),
-      stage: values.stage,
+      // Stage is only set when creating. On edit it is owned by the stage
+      // control, which applies the contact markers, the lost reason and the
+      // next-step rule — none of which this form can enforce.
+      ...(leadId ? {} : { stage: values.stage }),
       address: {
         line1: clean(values.address.line1),
         area: clean(values.address.area),
@@ -484,15 +487,17 @@ export function LeadForm({
           </Section>
 
           <Section title="Follow-up & status">
-            <Select
-              label="Stage"
-              value={values.stage}
-              onChange={(e) => set('stage', e.target.value)}
-              options={STAGE_OPTIONS.filter((o) => o.value !== 'LOST').map((o) => ({
-                value: o.value,
-                label: o.label,
-              }))}
-            />
+            {!leadId && (
+              <Select
+                label="Stage"
+                value={values.stage}
+                onChange={(e) => set('stage', e.target.value)}
+                options={STAGE_OPTIONS.filter((o) => o.value !== 'LOST').map((o) => ({
+                  value: o.value,
+                  label: o.label,
+                }))}
+              />
+            )}
             <Input
               label="Next follow-up"
               type="datetime-local"

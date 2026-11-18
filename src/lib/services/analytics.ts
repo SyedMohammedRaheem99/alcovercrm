@@ -58,6 +58,9 @@ export async function getDashboardSummary(ctx: AnalyticsContext): Promise<Dashbo
 
   const slaCutoff = new Date(now.getTime() - ctx.slaMinutes * 60000);
 
+  /** Shared by every follow-up bucket, so the counts can never drift apart. */
+  const openWithFollowUp = { stage: { $nin: CLOSED_STAGES } };
+
   const [
     overdue,
     dueToday,
@@ -80,10 +83,15 @@ export async function getDashboardSummary(ctx: AnalyticsContext): Promise<Dashbo
     responseAgg,
     siteVisitsToday,
   ] = await Promise.all([
-    Lead.countDocuments(baseFilter(ctx, { nextFollowUpAt: { $lt: now } })),
-    Lead.countDocuments(baseFilter(ctx, { nextFollowUpAt: { $gte: now, $lte: today.end } })),
-    Lead.countDocuments(baseFilter(ctx, { nextFollowUpAt: { $gte: tomorrow.start, $lte: tomorrow.end } })),
-    Lead.countDocuments(baseFilter(ctx, { nextFollowUpAt: { $gte: now, $lte: thisWeek.end } })),
+    // Follow-up buckets only ever cover leads that are still open. A won or
+    // lost deal keeps no pending follow-up, and counting one would send the
+    // team chasing a closed lead.
+    Lead.countDocuments(baseFilter(ctx, { ...openWithFollowUp, nextFollowUpAt: { $lt: now } })),
+    Lead.countDocuments(baseFilter(ctx, { ...openWithFollowUp, nextFollowUpAt: { $gte: now, $lte: today.end } })),
+    Lead.countDocuments(
+      baseFilter(ctx, { ...openWithFollowUp, nextFollowUpAt: { $gte: tomorrow.start, $lte: tomorrow.end } }),
+    ),
+    Lead.countDocuments(baseFilter(ctx, { ...openWithFollowUp, nextFollowUpAt: { $gte: now, $lte: thisWeek.end } })),
 
     // Never contacted and still open.
     Lead.countDocuments(baseFilter(ctx, { firstContactedAt: { $exists: false }, stage: { $in: OPEN_STAGES } })),

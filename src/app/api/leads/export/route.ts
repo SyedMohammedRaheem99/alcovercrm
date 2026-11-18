@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         userId: user.id,
         seesAllLeads: user.seesAllLeads,
         timezone: user.orgTimezone,
+        slaMinutes: user.orgSettings.leadResponseSlaMinutes ?? 30,
       },
       query,
     );

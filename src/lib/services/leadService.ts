@@ -4,7 +4,7 @@ import { scoped, type QueryFilter } from '@/lib/db/repository';
 import { normalizePhone } from '@/lib/utils/phone';
 import { ConflictError, NotFoundError } from '@/lib/api/response';
 import type { LeadStage, LostReason, ActivityType, CallOutcome } from '@/lib/constants/enums';
-import { CONNECTED_OUTCOMES } from '@/lib/constants/enums';
+import { CONNECTED_OUTCOMES, CLOSED_STAGES } from '@/lib/constants/enums';
 
 /**
  * Lead business logic.
@@ -277,6 +277,7 @@ export async function changeStage(
     nextFollowUpAt?: Date;
     nextFollowUpNote?: string;
   },
+  requireNextAction = false,
 ): Promise<ILead> {
   const lead = await Lead.findOne(scoped(ctx.organizationId, { _id: new Types.ObjectId(leadId) }));
   if (!lead) throw new NotFoundError('Lead not found');
@@ -284,7 +285,33 @@ export async function changeStage(
   const from = lead.stage;
   if (from === input.stage && !input.nextFollowUpAt) return lead;
 
+  const closing = CLOSED_STAGES.includes(input.stage);
+
+  // The discipline rule, applied to stage moves as well as logged calls:
+  // a lead that stays open must always carry a next step. Without this the
+  // rule only covered the call modal, and leads moved along from the board or
+  // the detail header could end up with nothing scheduled.
+  if (requireNextAction && !closing && input.stage !== 'ON_HOLD') {
+    const willHaveFollowUp = input.nextFollowUpAt ?? lead.nextFollowUpAt;
+    if (!willHaveFollowUp) {
+      throw new ConflictError(
+        'Set the next follow-up for this lead. A lead must never be left without a next step.',
+      );
+    }
+  }
+
   lead.stage = input.stage;
+
+  // Moving a lead off NEW means somebody has engaged with it, so the contact
+  // markers must be set here too — not only in `logActivity`. Three of the four
+  // stage-write paths used to skip this, which left the speed-to-lead report
+  // blind to every lead moved along by hand. Keyed on the TARGET stage rather
+  // than the previous one, so a reopened lead is covered as well.
+  if (input.stage !== 'NEW' && !lead.firstContactedAt) {
+    const contactedAt = new Date();
+    lead.firstContactedAt = contactedAt;
+    lead.lastContactedAt = lead.lastContactedAt ?? contactedAt;
+  }
 
   if (input.stage === 'LOST') {
     lead.lostReason = input.lostReason;
