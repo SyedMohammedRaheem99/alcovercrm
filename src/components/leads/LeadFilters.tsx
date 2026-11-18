@@ -32,6 +32,8 @@ export interface LeadFilterState {
   from: string;
   to: string;
   sort: string;
+  /** Set by the dashboard's speed-to-lead alert; mirrors that exact query. */
+  slaBreached: boolean;
 }
 
 export const EMPTY_FILTERS: LeadFilterState = {
@@ -46,6 +48,7 @@ export const EMPTY_FILTERS: LeadFilterState = {
   from: '',
   to: '',
   sort: '-createdAt',
+  slaBreached: false,
 };
 
 /** Chips shown above the list — the filters people actually reach for daily. */
@@ -68,6 +71,7 @@ export function countActiveFilters(f: LeadFilterState): number {
   if (f.assignedTo) n++;
   if (f.city) n++;
   if (f.from || f.to) n++;
+  if (f.slaBreached) n++;
   return n;
 }
 
@@ -168,6 +172,16 @@ export function LeadFilters({
               </button>
             );
           })}
+          {filters.slaBreached && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...filters, slaBreached: false })}
+              className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-danger-600 bg-danger-600 px-3.5 py-2 text-xs font-medium text-white"
+            >
+              Not called yet
+              <X className="h-3 w-3" />
+            </button>
+          )}
           {activeCount > 0 && (
             <button
               type="button"

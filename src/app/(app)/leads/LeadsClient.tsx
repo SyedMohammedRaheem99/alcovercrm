@@ -37,6 +37,7 @@ function filtersFromParams(params: URLSearchParams): LeadFilterState {
     from: params.get('from') ?? '',
     to: params.get('to') ?? '',
     sort: params.get('sort') ?? '-createdAt',
+    slaBreached: params.get('slaBreached') === 'true',
   };
 }
 
@@ -53,6 +54,7 @@ function buildQueryString(f: LeadFilterState, page: number): string {
   if (f.from) p.set('from', f.from);
   if (f.to) p.set('to', f.to);
   if (f.sort && f.sort !== '-createdAt') p.set('sort', f.sort);
+  if (f.slaBreached) p.set('slaBreached', 'true');
   if (page > 1) p.set('page', String(page));
   return p.toString();
 }
