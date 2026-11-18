@@ -34,7 +34,23 @@ function check(name: string, cond: boolean, detail = '') {
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600000);
 const daysAgo = (d: number) => new Date(Date.now() - d * 86400000);
-const hoursAhead = (h: number) => new Date(Date.now() + h * 3600000);
+/**
+ * A time that is still ahead of `now` but has not crossed into tomorrow.
+ *
+ * "Due today" means `now < t <= end of today`, so a fixture for it has to
+ * satisfy both halves. A plain `now + 4h` broke the window after 20:00, and a
+ * fixed afternoon anchor broke it before. Instead, divide the remaining time
+ * until midnight: `slot` 1 of 3 sits a third of the way through whatever is
+ * left, so the value is always in the future and always today — at 09:00 or at
+ * 23:59. The suite is then deterministic at any hour.
+ */
+const laterToday = (slot = 1, slots = 3) => {
+  const now = Date.now();
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  const remaining = endOfToday.getTime() - now;
+  return new Date(now + Math.max(1000, Math.floor((remaining * slot) / (slots + 1))));
+};
 
 async function main() {
   const mongod = await MongoMemoryServer.create();
@@ -66,7 +82,7 @@ async function main() {
     mk({ nextFollowUpAt: hoursAgo(5), stage: 'CONTACTED', createdAt: hoursAgo(31), firstContactedAt: hoursAgo(30), assignedTo: rep1._id, assignedToName: 'Rep One' }),
     mk({ nextFollowUpAt: daysAgo(2), stage: 'QUOTED', createdAt: hoursAgo(52), firstContactedAt: hoursAgo(50), assignedTo: rep1._id, assignedToName: 'Rep One' }),
     // 1 due later today
-    mk({ nextFollowUpAt: hoursAhead(3), stage: 'CONTACTED', createdAt: hoursAgo(21), firstContactedAt: hoursAgo(20), assignedTo: rep2._id, assignedToName: 'Rep Two' }),
+    mk({ nextFollowUpAt: laterToday(1), stage: 'CONTACTED', createdAt: hoursAgo(21), firstContactedAt: hoursAgo(20), assignedTo: rep2._id, assignedToName: 'Rep Two' }),
     // 2 never contacted, created long ago -> SLA breach
     mk({ stage: 'NEW', createdAt: hoursAgo(10) }),
     mk({ stage: 'NEW', createdAt: hoursAgo(8) }),
@@ -89,7 +105,7 @@ async function main() {
   await Activity.insertMany([
     { organizationId: org._id, leadId: (await Lead.findOne({ organizationId: org._id }))!._id, type: 'CALL', performedBy: rep1._id, performedByName: 'Rep One', status: 'COMPLETED' },
     { organizationId: org._id, leadId: (await Lead.findOne({ organizationId: org._id }))!._id, type: 'CALL', performedBy: rep1._id, performedByName: 'Rep One', status: 'COMPLETED' },
-    { organizationId: org._id, leadId: (await Lead.findOne({ organizationId: org._id }))!._id, type: 'SITE_VISIT', performedBy: rep2._id, performedByName: 'Rep Two', status: 'PENDING', scheduledAt: hoursAhead(4) },
+    { organizationId: org._id, leadId: (await Lead.findOne({ organizationId: org._id }))!._id, type: 'SITE_VISIT', performedBy: rep2._id, performedByName: 'Rep Two', status: 'PENDING', scheduledAt: laterToday(2) },
   ]);
 
   const ctx: AnalyticsContext = {

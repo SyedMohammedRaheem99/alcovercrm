@@ -256,6 +256,58 @@ const afterStagePatch = await (await fetch(base + `/api/leads/${sid}`, { headers
 t('PATCH cannot change stage', afterStagePatch.data?.lead?.stage === 'LOST', afterStagePatch.data?.lead?.stage);
 
 
+console.log('\n--- DASHBOARD ALERTS MATCH THEIR LINKS ---');
+// Regression guard. Twice an alert counted one set of leads and linked to a
+// different one, so the user clicked a number and got something else. Any
+// alert that shows a count MUST link to a list containing exactly that many
+// leads. If this fails, the count and the filter have drifted apart again.
+const dashHtml = await (await fetch(base + '/dashboard', { headers: auth })).text();
+
+const alertCount = (re) => {
+  const m = dashHtml.match(re);
+  return m ? parseInt(m[1], 10) : null;
+};
+
+// 1. "no next step / never been reached" alert
+const slaCount = alertCount(/>(\d+)<\/span>[\s\S]{0,120}?no next step/);
+if (slaCount === null) {
+  t('speed-to-lead alert absent (no breaching leads seeded)', true, 'skipped');
+} else {
+  const slaList = await (await fetch(base + '/api/leads?slaBreached=true&limit=200', { headers: auth })).json();
+  t('alert count equals the list it links to', slaCount === (slaList.meta?.total ?? -1),
+    `banner=${slaCount} list=${slaList.meta?.total}`);
+  const rows = slaList.data ?? [];
+  t('flagged leads have no follow-up booked', rows.every((l) => !l.nextFollowUpAt));
+  t('flagged leads have never been reached', rows.every((l) => !l.firstContactedAt));
+  t('flagged leads are all still open', rows.every((l) => l.stage !== 'WON' && l.stage !== 'LOST'));
+}
+
+// 2. Unassigned alert
+const unCount = alertCount(/>(\d+)<\/span>[\s\S]{0,120}?(?:unassigned|not assigned)/i);
+if (unCount !== null) {
+  const unList = await (await fetch(base + '/api/leads?assignedTo=unassigned&limit=200', { headers: auth })).json();
+  t('unassigned alert equals its list', unCount === (unList.meta?.total ?? -1),
+    `banner=${unCount} list=${unList.meta?.total}`);
+}
+
+// 3. Every alert link on the dashboard must resolve to a working filtered page.
+const alertLinks = [...dashHtml.matchAll(/href="(\/leads\?[^"]+)"/g)].map((m) =>
+  m[1].replace(/&amp;/g, '&'),
+);
+let brokenLink = null;
+for (const href of new Set(alertLinks)) {
+  const res = await fetch(base + href, { headers: auth });
+  if (res.status !== 200) { brokenLink = `${href} -> ${res.status}`; break; }
+}
+t('every dashboard filter link loads', brokenLink === null, brokenLink ?? `${new Set(alertLinks).size} links`);
+
+// 4. An unknown query param must never silently widen a filtered list — the
+//    exact failure that made the banner show all leads instead of the five.
+const strictA = await (await fetch(base + '/api/leads?slaBreached=true&limit=200', { headers: auth })).json();
+const strictB = await (await fetch(base + '/api/leads?slaBreached=true&bogusParam=xyz&limit=200', { headers: auth })).json();
+t('unknown params do not widen a filter', (strictA.meta?.total ?? 0) === (strictB.meta?.total ?? -1),
+  `${strictA.meta?.total} vs ${strictB.meta?.total}`);
+
 console.log('\n--- VALIDATION & HARDENING ---');
 r = await fetch(base + '/api/leads', {
   method: 'POST',

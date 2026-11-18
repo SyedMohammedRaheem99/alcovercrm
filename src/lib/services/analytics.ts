@@ -95,12 +95,20 @@ export async function getDashboardSummary(ctx: AnalyticsContext): Promise<Dashbo
 
     // Never contacted and still open.
     Lead.countDocuments(baseFilter(ctx, { firstContactedAt: { $exists: false }, stage: { $in: OPEN_STAGES } })),
-    // Uncontacted past the response-time promise — the speed-to-lead alert.
+    // The speed-to-lead alert: no successful contact on record, past the
+    // response-time promise, AND nobody has planned one either.
+    //
+    // The last condition is what makes this alert trustworthy. A lead with a
+    // follow-up booked for this afternoon is handled — flagging it as
+    // "not called" makes the user doubt their own schedule and teaches them
+    // to ignore the banner. Only a lead that nobody has reached and nobody
+    // has planned to reach is genuinely falling through.
     Lead.countDocuments(
       baseFilter(ctx, {
         firstContactedAt: { $exists: false },
         stage: { $in: OPEN_STAGES },
         createdAt: { $lt: slaCutoff },
+        nextFollowUpAt: { $exists: false },
       }),
     ),
     Lead.countDocuments(baseFilter(ctx, { assignedTo: { $exists: false }, stage: { $in: OPEN_STAGES } })),

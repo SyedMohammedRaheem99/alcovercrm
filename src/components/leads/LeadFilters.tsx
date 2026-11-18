@@ -178,7 +178,7 @@ export function LeadFilters({
               onClick={() => onChange({ ...filters, slaBreached: false })}
               className="flex min-h-[36px] shrink-0 items-center gap-1 rounded-full border border-danger-600 bg-danger-600 px-3.5 py-2 text-xs font-medium text-white"
             >
-              Not called yet
+              No next step
               <X className="h-3 w-3" />
             </button>
           )}

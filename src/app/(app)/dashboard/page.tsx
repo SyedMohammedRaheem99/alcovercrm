@@ -121,8 +121,11 @@ export default async function DashboardPage() {
             >
               <Zap className="h-4 w-4 shrink-0 text-danger-600" />
               <span className="min-w-0 flex-1 text-sm text-danger-700">
+                {/* Says what is actually known — no contact on record and no
+                    next step booked — rather than claiming nobody called. */}
                 <span className="tabular font-semibold">{summary.alerts.slaBreached}</span>{' '}
-                {summary.alerts.slaBreached === 1 ? 'lead has' : 'leads have'} not been called yet
+                {summary.alerts.slaBreached === 1 ? 'lead has' : 'leads have'} no next step —{' '}
+                {summary.alerts.slaBreached === 1 ? 'it has' : 'they have'} never been reached
               </span>
             </Link>
           )}

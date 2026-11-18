@@ -42,6 +42,9 @@ export function buildLeadFilter(ctx: BuildQueryContext, q: LeadQuery): QueryFilt
   /* ---- Assignment ---- */
   if (q.assignedTo === 'unassigned') {
     conditions.assignedTo = { $exists: false };
+    // Matches the dashboard's unassigned alert: a closed lead needs no owner,
+    // so counting one there and listing it here would disagree.
+    conditions.stage = conditions.stage ?? { $in: OPEN_STAGES };
   } else if (q.assignedTo === 'me') {
     conditions.assignedTo = new Types.ObjectId(ctx.userId);
   } else if (q.assignedTo && Types.ObjectId.isValid(q.assignedTo)) {
@@ -88,6 +91,8 @@ export function buildLeadFilter(ctx: BuildQueryContext, q: LeadQuery): QueryFilt
     conditions.firstContactedAt = { $exists: false };
     conditions.stage = conditions.stage ?? { $in: OPEN_STAGES };
     conditions.createdAt = { $lt: new Date(now.getTime() - ctx.slaMinutes * 60000) };
+    // A booked follow-up means the lead is handled, so it is not an alert.
+    conditions.nextFollowUpAt = { $exists: false };
   } else if (q.uncontacted === 'true') {
     conditions.firstContactedAt = { $exists: false };
     conditions.stage = conditions.stage ?? { $in: OPEN_STAGES };
