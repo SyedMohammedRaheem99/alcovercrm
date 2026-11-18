@@ -193,6 +193,69 @@ t('stage auto-advanced NEW -> CONTACTED', detail.data?.lead?.stage === 'CONTACTE
 t('firstContactedAt recorded', !!detail.data?.lead?.firstContactedAt);
 t('timeline has entries', detail.data?.activities?.length > 0, `${detail.data?.activities?.length} entries`);
 
+console.log('\n--- STAGE CHANGES (the single gate) ---');
+// A fresh lead to drive stage moves without disturbing the one above.
+r = await fetch(base + '/api/leads', {
+  method: 'POST',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Stage Flow Test', phone: '9811100022', source: 'WALK_IN' }),
+});
+const stageLead = await r.json();
+const sid = stageLead.data?._id;
+t('lead for stage tests created', r.status === 201, `got ${r.status}`);
+
+// The discipline rule must now cover stage moves, not only logged calls.
+r = await fetch(base + `/api/leads/${sid}/stage`, {
+  method: 'POST',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stage: 'QUALIFIED' }),
+});
+t('open stage move WITHOUT a next step is rejected', r.status === 409, `got ${r.status}`);
+
+r = await fetch(base + `/api/leads/${sid}/stage`, {
+  method: 'POST',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    stage: 'QUALIFIED',
+    nextFollowUpAt: new Date(Date.now() + 86400000).toISOString(),
+  }),
+});
+t('open stage move WITH a next step is accepted', r.status === 200, `got ${r.status}`);
+
+r = await fetch(base + `/api/leads/${sid}`, { headers: auth });
+const sDetail = await r.json();
+t('stage move stamped firstContactedAt', !!sDetail.data?.lead?.firstContactedAt);
+
+// Closing needs no next step, but LOST always needs a reason.
+r = await fetch(base + `/api/leads/${sid}/stage`, {
+  method: 'POST',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stage: 'LOST' }),
+});
+t('LOST without a reason is rejected', r.status === 422 || r.status === 400, `got ${r.status}`);
+
+r = await fetch(base + `/api/leads/${sid}/stage`, {
+  method: 'POST',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stage: 'LOST', lostReason: 'PRICE_TOO_HIGH' }),
+});
+t('LOST with a reason is accepted', r.status === 200, `got ${r.status}`);
+
+r = await fetch(base + `/api/leads/${sid}`, { headers: auth });
+const closed = await r.json();
+t('closing cleared the pending follow-up', !closed.data?.lead?.nextFollowUpAt);
+t('closing stamped lostAt', !!closed.data?.lead?.lostAt);
+
+// Stage must no longer be settable through the generic edit endpoint.
+await fetch(base + `/api/leads/${sid}`, {
+  method: 'PATCH',
+  headers: { ...auth, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ stage: 'WON' }),
+});
+const afterStagePatch = await (await fetch(base + `/api/leads/${sid}`, { headers: auth })).json();
+t('PATCH cannot change stage', afterStagePatch.data?.lead?.stage === 'LOST', afterStagePatch.data?.lead?.stage);
+
+
 console.log('\n--- VALIDATION & HARDENING ---');
 r = await fetch(base + '/api/leads', {
   method: 'POST',

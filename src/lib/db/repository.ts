@@ -133,7 +133,9 @@ export const LEAD_WRITABLE_FIELDS = [
   'decisionMaker',
   'hasCompetitorQuote',
   'competitorNames',
-  'stage',
+  // `stage` is deliberately NOT writable here. Every stage move must go through
+  // `changeStage` (POST /api/leads/:id/stage) so the contact markers, the lost
+  // reason and the next-step rule are applied on every path.
   'priority',
   'scoreLocked',
   'source',

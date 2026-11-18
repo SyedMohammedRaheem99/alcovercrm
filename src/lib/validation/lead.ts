@@ -204,6 +204,7 @@ export const leadQuerySchema = paginationQuery.extend({
   from: optionalString(10),
   to: optionalString(10),
   uncontacted: z.enum(['true', 'false']).optional(),
+  slaBreached: z.enum(['true', 'false']).optional(),
   includeDeleted: z.enum(['true', 'false']).optional(),
   sort: z
     .enum(['createdAt', '-createdAt', 'updatedAt', '-updatedAt', 'nextFollowUpAt', '-nextFollowUpAt', 'score', '-score', 'name', '-name'])

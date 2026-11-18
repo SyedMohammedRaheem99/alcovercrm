@@ -35,6 +35,7 @@ export async function POST(req: NextRequest, { params }: Ctx) {
       },
       id,
       input,
+      user.orgSettings.requireNextActionOnCall,
     );
 
     await writeAudit({

@@ -5,7 +5,7 @@ import { Lead, User, Activity } from '@/lib/models';
 import { requireOrgUser, ForbiddenError } from '@/lib/auth/session';
 import { bulkActionSchema } from '@/lib/validation/lead';
 import { scoped } from '@/lib/db/repository';
-import { ok, handleApiError, NotFoundError } from '@/lib/api/response';
+import { ok, fail, handleApiError, NotFoundError } from '@/lib/api/response';
 import { writeAudit, auditContextFrom } from '@/lib/services/audit';
 
 export const runtime = 'nodejs';
@@ -63,6 +63,12 @@ export async function POST(req: NextRequest) {
       }
 
       case 'STAGE': {
+        // Mirror the single-lead rule: a lost lead always carries a reason,
+        // otherwise the lost-reason report silently drops rows.
+        if (input.stage === 'LOST' && !input.lostReason) {
+          return fail('Select a reason when marking leads as lost', 400);
+        }
+
         const set: Record<string, unknown> = { stage: input.stage, updatedBy: actorId };
         const unset: Record<string, string> = {};
 
@@ -83,6 +89,19 @@ export async function POST(req: NextRequest) {
 
         update = Object.keys(unset).length ? { $set: set, $unset: unset } : { $set: set };
         auditMeta = { ...auditMeta, stage: input.stage };
+
+        // Moving a lead off NEW means someone engaged with it. `updateMany`
+        // bypasses the model hook, so the contact markers are stamped here in a
+        // separate pass restricted to leads that are still NEW and uncontacted.
+        if (input.stage !== 'NEW') {
+          await Lead.updateMany(
+            scoped(user.organizationId!, {
+              _id: { $in: ids },
+              firstContactedAt: { $exists: false },
+            }),
+            { $set: { firstContactedAt: now, lastContactedAt: now } },
+          );
+        }
         break;
       }
 

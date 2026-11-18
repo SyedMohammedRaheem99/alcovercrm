@@ -116,12 +116,12 @@ export default async function DashboardPage() {
         <div className="mb-4 space-y-2">
           {summary.alerts.slaBreached > 0 && (
             <Link
-              href="/leads?uncontacted=true&stage=NEW"
+              href="/leads?slaBreached=true"
               className="flex items-center gap-2.5 rounded-lg border-l-[3px] border-danger-600 bg-danger-50 px-3 py-2.5"
             >
               <Zap className="h-4 w-4 shrink-0 text-danger-600" />
               <span className="min-w-0 flex-1 text-sm text-danger-700">
-                <span className="tabular font-semibold">{summary.alerts.slaBreached}</span> new{' '}
+                <span className="tabular font-semibold">{summary.alerts.slaBreached}</span>{' '}
                 {summary.alerts.slaBreached === 1 ? 'lead has' : 'leads have'} not been called yet
               </span>
             </Link>

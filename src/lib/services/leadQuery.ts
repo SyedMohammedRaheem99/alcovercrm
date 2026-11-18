@@ -1,5 +1,6 @@
 import { Types } from 'mongoose';
 import { scoped, withOwnership, safeRegex, type QueryFilter } from '@/lib/db/repository';
+import { OPEN_STAGES } from '@/lib/constants/enums';
 import { parseDateRangeParam, dayRange, weekRange } from '@/lib/utils/dates';
 import { normalizePhone } from '@/lib/utils/phone';
 import type { LeadQuery } from '@/lib/validation/lead';
@@ -17,6 +18,8 @@ export interface BuildQueryContext {
   userId: string;
   seesAllLeads: boolean;
   timezone: string;
+  /** Response-time target, used by the `slaBreached` filter. */
+  slaMinutes: number;
 }
 
 export function buildLeadFilter(ctx: BuildQueryContext, q: LeadQuery): QueryFilter {
@@ -76,15 +79,27 @@ export function buildLeadFilter(ctx: BuildQueryContext, q: LeadQuery): QueryFilt
     }
   }
 
-  /* ---- Uncontacted (SLA breach candidates) ---- */
-  if (q.uncontacted === 'true') {
+  /* ---- Uncontacted (SLA breach candidates) ----
+   * `slaBreached` reproduces the dashboard alert exactly — same three
+   * conditions, same cutoff — so the banner's count and this list can never
+   * disagree. `uncontacted` stays the looser "never contacted" filter.
+   */
+  if (q.slaBreached === 'true') {
     conditions.firstContactedAt = { $exists: false };
+    conditions.stage = conditions.stage ?? { $in: OPEN_STAGES };
+    conditions.createdAt = { $lt: new Date(now.getTime() - ctx.slaMinutes * 60000) };
+  } else if (q.uncontacted === 'true') {
+    conditions.firstContactedAt = { $exists: false };
+    conditions.stage = conditions.stage ?? { $in: OPEN_STAGES };
   }
 
   /* ---- Created-date range ---- */
   const range = parseDateRangeParam(q.from, q.to, ctx.timezone);
   if (range.start || range.end) {
+    // Merge rather than replace: `slaBreached` may already have set an upper
+    // bound on `createdAt`, and overwriting it would widen the filter.
     conditions.createdAt = {
+      ...(conditions.createdAt as Record<string, unknown> | undefined),
       ...(range.start ? { $gte: range.start } : {}),
       ...(range.end ? { $lte: range.end } : {}),
     };

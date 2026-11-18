@@ -5,7 +5,7 @@ import { MapPin, Navigation, Phone, CalendarDays } from 'lucide-react';
 import { connectDB } from '@/lib/db/connect';
 import { Activity, Lead } from '@/lib/models';
 import { requireUser } from '@/lib/auth/session';
-import { scoped } from '@/lib/db/repository';
+import { scoped, withOwnership } from '@/lib/db/repository';
 import { dayRange } from '@/lib/utils/dates';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardBody, EmptyState } from '@/components/ui/Card';
@@ -32,7 +32,7 @@ export default async function SiteVisitsPage() {
   const now = new Date();
   const today = dayRange(now, user.orgTimezone);
 
-  const visits = await Activity.find(
+  const allVisits = await Activity.find(
     scoped(user.organizationId, {
       type: 'SITE_VISIT',
       status: 'PENDING',
@@ -40,16 +40,27 @@ export default async function SiteVisitsPage() {
     }),
   )
     .sort({ scheduledAt: 1 })
-    .limit(100)
+    .limit(200)
     .lean();
 
   // Fetch the related leads in ONE query rather than populating per visit.
-  const leadIds = visits.map((v) => v.leadId);
-  const leads = await Lead.find(scoped(user.organizationId, { _id: { $in: leadIds } }))
+  // Ownership is applied on the LEAD, not the activity: a SALES user must only
+  // see visits for leads assigned to them, exactly as on every other screen.
+  const leadIds = allVisits.map((v) => v.leadId);
+  const leads = await Lead.find(
+    withOwnership(
+      scoped(user.organizationId, { _id: { $in: leadIds } }),
+      user.id,
+      user.seesAllLeads,
+    ),
+  )
     .select('name phone address googleMapsLink leadCode')
     .lean();
 
   const leadMap = new Map(leads.map((l) => [String(l._id), l]));
+
+  // Drop visits whose lead is not visible to this user (or was deleted).
+  const visits = allVisits.filter((v) => leadMap.has(String(v.leadId))).slice(0, 100);
 
   const todayVisits = visits.filter(
     (v) => v.scheduledAt && v.scheduledAt >= today.start && v.scheduledAt <= today.end,

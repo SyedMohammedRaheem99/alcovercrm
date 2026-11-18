@@ -6,6 +6,7 @@ import { Lead } from '@/lib/models';
 import { requireUser } from '@/lib/auth/session';
 import { scoped, withOwnership } from '@/lib/db/repository';
 import { LEAD_LIST_PROJECTION } from '@/lib/services/leadQuery';
+import { CLOSED_STAGES } from '@/lib/constants/enums';
 import { dayRange, weekRange } from '@/lib/utils/dates';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardHeader, CardTitle, CardBody, EmptyState } from '@/components/ui/Card';
@@ -35,34 +36,37 @@ export default async function FollowUpsPage() {
   const scope = (extra: Record<string, unknown>) =>
     withOwnership(scoped(user.organizationId!, extra), user.id, user.seesAllLeads);
 
+  /**
+   * Every bucket on this page is about work still to be done, so all of them
+   * exclude closed leads — not just the "no next step" one. A won or lost deal
+   * showing up under Overdue sends the team chasing a finished job.
+   */
+  const openScope = (extra: Record<string, unknown>) =>
+    scope({ ...extra, stage: { $nin: CLOSED_STAGES } });
+
   const [overdue, dueToday, dueTomorrow, laterThisWeek, noFollowUp] = await Promise.all([
-    Lead.find(scope({ nextFollowUpAt: { $lt: now } }))
+    Lead.find(openScope({ nextFollowUpAt: { $lt: now } }))
       .select(LEAD_LIST_PROJECTION)
       .sort({ nextFollowUpAt: 1 })
       .limit(50)
       .lean(),
-    Lead.find(scope({ nextFollowUpAt: { $gte: now, $lte: today.end } }))
+    Lead.find(openScope({ nextFollowUpAt: { $gte: now, $lte: today.end } }))
       .select(LEAD_LIST_PROJECTION)
       .sort({ nextFollowUpAt: 1 })
       .limit(50)
       .lean(),
-    Lead.find(scope({ nextFollowUpAt: { $gte: tomorrow.start, $lte: tomorrow.end } }))
+    Lead.find(openScope({ nextFollowUpAt: { $gte: tomorrow.start, $lte: tomorrow.end } }))
       .select(LEAD_LIST_PROJECTION)
       .sort({ nextFollowUpAt: 1 })
       .limit(50)
       .lean(),
-    Lead.find(scope({ nextFollowUpAt: { $gt: tomorrow.end, $lte: thisWeek.end } }))
+    Lead.find(openScope({ nextFollowUpAt: { $gt: tomorrow.end, $lte: thisWeek.end } }))
       .select(LEAD_LIST_PROJECTION)
       .sort({ nextFollowUpAt: 1 })
       .limit(50)
       .lean(),
     // Open leads with no next step — the silent killer this CRM exists to stop.
-    Lead.find(
-      scope({
-        nextFollowUpAt: { $exists: false },
-        stage: { $nin: ['WON', 'LOST'] },
-      }),
-    )
+    Lead.find(openScope({ nextFollowUpAt: { $exists: false } }))
       .select(LEAD_LIST_PROJECTION)
       .sort({ createdAt: -1 })
       .limit(50)
